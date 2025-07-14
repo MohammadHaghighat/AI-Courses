@@ -1,0 +1,22 @@
+,,if,if,gmm,gmm,svm,svm
+,,Anchor,DTOR,Anchor,DTOR,Anchor,DTOR
+glass+identification,Execution time,15.37 (22.69),17.50 (19.57),0.10 (0.13),1.71 (3.12),0.48 (0.96),2.31 (4.20)
+glass+identification,Precision,0.51 $\pm$ 0.37,0.90 $\pm$ 0.20,0.61 $\pm$ 0.14,0.15 $\pm$ 0.17,0.61 $\pm$ 0.09,0.72 $\pm$ 0.18
+glass+identification,Coverage,0.03 $\pm$ 0.02,0.10 $\pm$ 0.12,0.26 $\pm$ 0.01,0.33 $\pm$ 0.27,0.52 $\pm$ 0.25,0.15 $\pm$ 0.15
+glass+identification,Validity \%,6,100,4,100,100,100
+glass+identification,Rule length,0.20,5.42,0.04,7.70,1.00,6.96
+ionosphere,Execution time,199.06 (316.44),19.86 (23.77),11.42 (21.09),2.78 (4.97),4.00 (5.99),4.19 (7.40)
+ionosphere,Precision,0.73 $\pm$ 0.11,0.91 $\pm$ 0.21,0.64 $\pm$ 0.04,0.86 $\pm$ 0.27,0.54 $\pm$ 0.04,0.61 $\pm$ 0.23
+ionosphere,Coverage,0.00 $\pm$ 0.00,0.08 $\pm$ 0.07,0.02 $\pm$ 0.01,0.18 $\pm$ 0.17,0.62 $\pm$ 0.31,0.06 $\pm$ 0.07
+ionosphere,Validity \%,8,100,12,100,100,100
+ionosphere,Rule length,0.90,6.20,0.40,7.56,1.00,7.74
+lymphography,Execution time,21.90 (52.63),3.54 (6.21),2.98 (5.37),2.00 (4.06),0.79 (1.27),2.28 (4.20)
+lymphography,Precision,0.51 $\pm$ 0.37,0.89 $\pm$ 0.20,0.77 $\pm$ 0.26,0.83 $\pm$ 0.15,0.56 $\pm$ 0.03,0.70 $\pm$ 0.22
+lymphography,Coverage,0.01 $\pm$ 0.01,0.08 $\pm$ 0.07,0.05 $\pm$ 0.03,0.07 $\pm$ 0.08,0.68 $\pm$ 0.23,0.03 $\pm$ 0.03
+lymphography,Validity \%,8,100,8,100,100,100
+lymphography,Rule length,0.54,6.50,0.28,7.06,1.00,7.10
+breast+cancer+wisconsin+diagnostic,Execution time,135.87 (135.87),5.12 (8.93),0.39 (0.39),3.19 (5.90),3.29 (6.72),4.76 (7.86)
+breast+cancer+wisconsin+diagnostic,Precision,0.54 $\pm$ nan,0.96 $\pm$ 0.13,0.73 $\pm$ nan,0.27 $\pm$ 0.33,0.59 $\pm$ 0.07,0.86 $\pm$ 0.18
+breast+cancer+wisconsin+diagnostic,Coverage,0.02 $\pm$ nan,0.12 $\pm$ 0.10,0.25 $\pm$ nan,0.26 $\pm$ 0.21,0.63 $\pm$ 0.15,0.06 $\pm$ 0.10
+breast+cancer+wisconsin+diagnostic,Validity \%,2,100,2,100,100,100
+breast+cancer+wisconsin+diagnostic,Rule length,0.20,6.62,0.02,7.98,1.00,7.90
