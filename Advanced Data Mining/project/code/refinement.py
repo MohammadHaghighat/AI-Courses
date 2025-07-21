@@ -1,4 +1,4 @@
-# === File: refinement.py ===
+# === File: refinement.py (Corrected) ===
 import numpy as np
 import torch
 from sklearn.mixture import GaussianMixture
@@ -21,7 +21,6 @@ class DataRefinementModule:
             data_tensor = torch.FloatTensor(data).to(device)
             # We take the features before the final classification head
             if isinstance(model, torch.nn.Sequential):
-                 # For our MLP, get output of the second to last layer
                 activation = {}
                 def get_activation(name):
                     def hook(model, input, output):
@@ -38,18 +37,23 @@ class DataRefinementModule:
         # For image data, process in batches
         data_loader = torch.utils.data.DataLoader(data, batch_size=512, shuffle=False)
         for batch in data_loader:
+            if isinstance(batch, list): # Dataloader for Subset returns a list
+                 batch = batch[0]
             batch = batch.to(device)
+
             # Use a hook to get features from the layer before the final fc layer
             activation = {}
             def get_activation(name):
                 def hook(model, input, output):
-                    activation[name] = output.detach()
+                    # THE FIX IS HERE: Use flatten instead of squeeze
+                    # This reliably converts [B, C, 1, 1] to [B, C]
+                    activation[name] = torch.flatten(output, start_dim=1).detach()
                 return hook
 
             handle = model.avgpool.register_forward_hook(get_activation('avgpool'))
             model(batch)
             handle.remove()
-            reps.append(activation['avgpool'].cpu().squeeze())
+            reps.append(activation['avgpool'].cpu()) # No need for squeeze anymore
 
         return torch.cat(reps, dim=0).numpy()
 
@@ -68,22 +72,18 @@ class DataRefinementModule:
             start = i * subset_size
             end = (i + 1) * subset_size if i < self.K - 1 else n_samples
             subset_indices = indices[start:end]
-            self.occs[i].fit(representations[subset_indices])
+            # Handle case where subset might be too small for GMM
+            if len(subset_indices) > 1:
+                self.occs[i].fit(representations[subset_indices])
 
         # 3. Get anomaly scores from all OCCs
         all_scores = np.array([occ.score_samples(representations) for occ in self.occs])
         
         # 4. Determine thresholds and perform pseudo-labeling
-        # Gamma is the percentile, set based on expected anomaly ratio
-        # A higher multiplier makes the filtering more aggressive
         gamma = 100 * anomaly_ratio * 1.5 
+        thresholds = np.percentile(all_scores, max(5, gamma), axis=1)
         
-        thresholds = np.percentile(all_scores, max(5, gamma), axis=1) # Use at least 5th percentile
-        
-        # A sample is pseudo-normal if its score is above the threshold for ALL classifiers
-        # score_samples gives log-likelihood, so higher is better (more normal)
         is_pseudo_normal = np.all(all_scores > thresholds[:, np.newaxis], axis=0)
-        
         pseudo_normal_indices = np.where(is_pseudo_normal)[0]
         
         num_removed = n_samples - len(pseudo_normal_indices)
