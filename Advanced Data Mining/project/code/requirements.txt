@@ -1,3 +1,4 @@
+# === File: requirements.txt ===
 torch
 torchvision
 scikit-learn
@@ -5,3 +6,4 @@ numpy
 pandas
 matplotlib
 scipy
+requests
