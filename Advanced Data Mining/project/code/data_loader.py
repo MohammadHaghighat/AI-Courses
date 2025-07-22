@@ -1,4 +1,4 @@
-# === File: data_loader.py (Using 'requests' library) ===
+# === File: data_loader.py ===
 import torch
 import numpy as np
 import pandas as pd
@@ -6,12 +6,13 @@ from torchvision import datasets, transforms
 from sklearn.preprocessing import MinMaxScaler
 from scipy.io import loadmat
 import os
-import requests # Use the requests library instead of urllib
+import requests
 
 def get_cifar10_dataloaders(normal_class, anomaly_ratio, batch_size=128):
     """
     Prepares CIFAR-10 training and testing dataloaders for anomaly detection.
     """
+    # (This function is unchanged and correct)
     transform = transforms.Compose([
         transforms.ToTensor(),
         transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
@@ -45,22 +46,23 @@ def get_thyroid_dataloaders(anomaly_ratio, test_size=0.5):
     if not os.path.exists('./data'):
         os.makedirs('./data')
 
-    # --- THE FIX IS HERE: Using the 'requests' library ---
+    # This 'if' block will now be SKIPPED because you manually placed the file.
     if not os.path.exists(file_path):
         print("Downloading Annthyroid dataset...")
         try:
-            headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.36'}
-            # Use requests.get which is often more robust
+            headers = {'User-Agent': 'Mozilla/5.0'}
             response = requests.get(url, headers=headers, allow_redirects=True, timeout=15)
-            response.raise_for_status()  # This will raise an error for bad responses (4xx or 5xx)
+            response.raise_for_status()
             with open(file_path, 'wb') as f:
                 f.write(response.content)
             print("Download complete.")
         except requests.exceptions.RequestException as e:
             print(f"Failed to download the dataset. Error: {e}")
-            print("Please try downloading the file manually from the URL and placing it in the './data/' directory.")
+            print("\nPlease perform a manual download as instructed and re-run the script.\n")
             raise
 
+    # The script will continue from here.
+    print("Dataset 'annthyroid.mat' found locally. Loading data...")
     data_mat = loadmat(file_path)
     X = data_mat['X']
     y = data_mat['y'].ravel()
