@@ -1,18 +1,22 @@
-# === File: data_loader.py ===
+# === File: data_loader.py (Complete and Final Version) ===
 import torch
 import numpy as np
 import pandas as pd
 from torchvision import datasets, transforms
 from sklearn.preprocessing import MinMaxScaler
-from scipy.io import loadmat
+from sklearn.model_selection import train_test_split
 import os
 import requests
+import zipfile
+import io
 
+# ======================================================================
+#  Function for CIFAR-10 (This was likely deleted by mistake)
+# ======================================================================
 def get_cifar10_dataloaders(normal_class, anomaly_ratio, batch_size=128):
     """
     Prepares CIFAR-10 training and testing dataloaders for anomaly detection.
     """
-    # (This function is unchanged and correct)
     transform = transforms.Compose([
         transforms.ToTensor(),
         transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
@@ -37,48 +41,68 @@ def get_cifar10_dataloaders(normal_class, anomaly_ratio, batch_size=128):
     test_labels = [0] * len(test_normal_data) + [1] * len(test_anomaly_data)
     return unlabeled_train_data, test_data, test_labels
 
-def get_thyroid_dataloaders(anomaly_ratio, test_size=0.5):
+# ======================================================================
+#  Function for Thyroid (This is the version that works)
+# ======================================================================
+def get_thyroid_dataloaders(anomaly_ratio, test_size=0.5, random_state=42):
     """
-    Prepares Thyroid (annthyroid) dataset for anomaly detection.
+    Handles downloading the standard 'annthyroid' dataset version and preparing it for the SRR framework.
+    This version uses the 'ann-train.data' and 'ann-test.data' files.
     """
-    url = "http://odds.cs.stonybrook.edu/annthyroid-dataset/"
-    file_path = "./data/annthyroid.mat"
-    if not os.path.exists('./data'):
-        os.makedirs('./data')
+    url = "https://archive.ics.uci.edu/static/public/102/thyroid+disease.zip"
+    combined_file_path = "./data/thyroid_ann_combined.csv"
 
-    # This 'if' block will now be SKIPPED because you manually placed the file.
-    if not os.path.exists(file_path):
-        print("Downloading Annthyroid dataset...")
-        try:
-            headers = {'User-Agent': 'Mozilla/5.0'}
-            response = requests.get(url, headers=headers, allow_redirects=True, timeout=15)
-            response.raise_for_status()
-            with open(file_path, 'wb') as f:
-                f.write(response.content)
-            print("Download complete.")
-        except requests.exceptions.RequestException as e:
-            print(f"Failed to download the dataset. Error: {e}")
-            print("\nPlease perform a manual download as instructed and re-run the script.\n")
-            raise
+    if not os.path.exists(combined_file_path):
+        print(f"Downloading and combining standard Thyroid 'ann' dataset files...")
+        os.makedirs(os.path.dirname(combined_file_path), exist_ok=True)
+        
+        response = requests.get(url)
+        response.raise_for_status()
+        
+        df_list = []
+        with zipfile.ZipFile(io.BytesIO(response.content)) as z:
+            files_to_load = ['ann-train.data', 'ann-test.data']
+            for file_name in files_to_load:
+                with z.open(file_name) as f:
+                    df_part = pd.read_csv(io.TextIOWrapper(f), header=None, sep=' ', usecols=range(22))
+                    df_list.append(df_part)
 
-    # The script will continue from here.
-    print("Dataset 'annthyroid.mat' found locally. Loading data...")
-    data_mat = loadmat(file_path)
-    X = data_mat['X']
-    y = data_mat['y'].ravel()
+        df = pd.concat(df_list, ignore_index=True)
+        df.to_csv(combined_file_path, index=False)
+        print("Combining and saving complete.")
+
+    print("Loading and preprocessing combined Thyroid 'ann' data...")
+    df = pd.read_csv(combined_file_path)
+    
+    X = df.iloc[:, :-1].values
+    y = df.iloc[:, -1].values
+    
+    y_binary = np.where(y == 3, 1, 0)
+    
     scaler = MinMaxScaler()
-    X = scaler.fit_transform(X)
-    normal_data = X[y == 0]
-    anomaly_data = X[y == 1]
-    np.random.shuffle(normal_data)
-    split_idx = int(len(normal_data) * (1 - test_size))
-    normal_train_pool = normal_data[:split_idx]
-    normal_test_pool = normal_data[split_idx:]
-    num_anomalies_to_inject = int(len(normal_train_pool) * anomaly_ratio / (1 - anomaly_ratio)) if anomaly_ratio > 0 else 0
-    np.random.shuffle(anomaly_data)
-    anomalies_to_inject = anomaly_data[:num_anomalies_to_inject]
-    unlabeled_train_data = np.vstack([normal_train_pool, anomalies_to_inject])
-    remaining_anomalies = anomaly_data[num_anomalies_to_inject:]
-    test_data = np.vstack([normal_test_pool, remaining_anomalies])
-    test_labels = np.array([0] * len(normal_test_pool) + [1] * len(remaining_anomalies))
+    X_scaled = scaler.fit_transform(X)
+    
+    X_normal = X_scaled[y_binary == 0]
+    X_anomaly = X_scaled[y_binary == 1]
+    
+    X_normal_train_pool, X_normal_test = train_test_split(
+        X_normal, test_size=test_size, random_state=random_state
+    )
+    
+    num_anomalies_to_inject = int(len(X_normal_train_pool) * anomaly_ratio / (1 - anomaly_ratio)) if anomaly_ratio > 0 else 0
+    if num_anomalies_to_inject > len(X_anomaly):
+        num_anomalies_to_inject = len(X_anomaly)
+    
+    if num_anomalies_to_inject > 0:
+        anomaly_sample_indices = np.random.choice(len(X_anomaly), num_anomalies_to_inject, replace=False)
+        anomalies_for_train = X_anomaly[anomaly_sample_indices]
+        unlabeled_train_data = np.vstack([X_normal_train_pool, anomalies_for_train])
+    else:
+        unlabeled_train_data = X_normal_train_pool
+
+    test_data = np.vstack([X_normal_test, X_anomaly])
+    test_labels = np.array([0] * len(X_normal_test) + [1] * len(X_anomaly))
+    
+    print(f"Thyroid 'ann' data prepared. Training set size: {len(unlabeled_train_data)}, Test set size: {len(test_data)}")
+    
     return unlabeled_train_data, test_data, test_labels
